@@ -262,7 +262,7 @@
 # MAGIC current_user = spark.sql("SELECT current_user()").collect()[0][0]
 # MAGIC username = current_user.split("@")[0]
 # MAGIC clean_username = re.sub(r'[^a-z0-9]', '_', username.lower())
-# MAGIC catalog_name = f"sdp_workshop_{clean_username}"
+# MAGIC catalog_name = spark.sql("SELECT current_catalog()").collect()[0][0]
 # MAGIC
 # MAGIC # Usar como catálogo por defecto
 # MAGIC spark.sql(f"USE CATALOG {catalog_name}")
@@ -271,9 +271,23 @@
 
 # COMMAND ----------
 
+# Create widget with the catalog name
+dbutils.widgets.text("bronze", f"sdp_workshop_{clean_username}_bronze")
+dbutils.widgets.text("silver", f"sdp_workshop_{clean_username}_silver")
+dbutils.widgets.text("gold", f"sdp_workshop_{clean_username}_gold")
+
+# COMMAND ----------
+
+# Usar como catálogo por defecto
+spark.sql(f"USE CATALOG {catalog_name}")
+print(f"✓ Usando catálogo: {catalog_name}")
+print("  Todas las consultas SQL usarán este catálogo automáticamente")
+
+# COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- Ver estado actual final
-# MAGIC SELECT * FROM silver.customers ORDER BY customer_id;
+# MAGIC SELECT * FROM $silver.customers ORDER BY customer_id;
 
 # COMMAND ----------
 
@@ -281,22 +295,22 @@
 # MAGIC -- Verificar conteos
 # MAGIC SELECT 
 # MAGIC   'customers_raw' AS table_name, COUNT(*) AS row_count 
-# MAGIC FROM bronze.customers_raw
+# MAGIC FROM $bronze.customers_raw
 # MAGIC UNION ALL
 # MAGIC SELECT 
 # MAGIC   'customers_clean' AS table_name, COUNT(*) AS row_count 
-# MAGIC FROM bronze.customers_clean
+# MAGIC FROM $bronze.customers_clean
 # MAGIC UNION ALL
 # MAGIC SELECT 
 # MAGIC   'customers (current)' AS table_name, COUNT(*) AS row_count 
-# MAGIC FROM silver.customers;
+# MAGIC FROM $silver.customers;
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Clientes actualizados (con ciudad SF)
 # MAGIC SELECT customer_id, name, email, city, state
-# MAGIC FROM silver.customers
+# MAGIC FROM $silver.customers
 # MAGIC WHERE city = 'San Francisco'
 # MAGIC ORDER BY customer_id;
 
@@ -305,11 +319,11 @@
 # MAGIC %sql
 # MAGIC -- Verificar que eliminados no existan
 # MAGIC SELECT customer_id 
-# MAGIC FROM bronze.customers_raw
+# MAGIC FROM $bronze.customers_raw
 # MAGIC WHERE operation = 'DELETE'
 # MAGIC EXCEPT
 # MAGIC SELECT customer_id
-# MAGIC FROM silver.customers;
+# MAGIC FROM $silver.customers;
 # MAGIC -- Debe devolver IDs eliminados (CUST0003, CUST0007)
 
 # COMMAND ----------
